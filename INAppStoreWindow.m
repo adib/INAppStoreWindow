@@ -144,6 +144,7 @@ static inline CGGradientRef createGradientWithColors(NSColor *startingColor, NSC
 - (void)_hideTitleBarView:(BOOL)hidden;
 - (CGFloat)_defaultTrafficLightLeftMargin;
 - (CGFloat)_trafficLightSeparation;
+- (NSString*) _restorableKeyWithName:(NSString*) name;
 @end
 
 @implementation INTitlebarView
@@ -339,11 +340,14 @@ static inline CGGradientRef createGradientWithColors(NSColor *startingColor, NSC
 - (void)dealloc
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
-//    [self setDelegate:nil];
+    [self setDelegate:nil];
     #if !__has_feature(objc_arc)
-//    [_delegateProxy release];
+    [_delegateProxy release];
     [_titleBarView release];
-    [super dealloc];    
+    [super dealloc];
+    #else
+    _delegateProxy = nil;
+    _titleBarView = nil;
     #endif
 }
 
@@ -404,6 +408,23 @@ static inline CGGradientRef createGradientWithColors(NSColor *startingColor, NSC
 	[super setTitle:aString];
 	[self _layoutTrafficLightsAndContent];
 	[self _displayWindowAndTitlebar];
+}
+
+-(void)encodeRestorableStateWithCoder:(NSCoder *)coder
+{
+    [super encodeRestorableStateWithCoder:coder];
+
+    [coder encodeFloat:self.titleBarHeight forKey:[self _restorableKeyWithName:@"titleBarHeight"]];
+    [coder encodeObject:self.titleBarView forKey:[self _restorableKeyWithName:@"titleBarView"]];
+    [coder encodeBool:self.centerFullScreenButton forKey:[self _restorableKeyWithName:@"centerFullScreenButton"]];
+    [coder encodeBool:self.centerTrafficLightButtons forKey:[self _restorableKeyWithName:@"centerTrafficLightButtons"]];
+    [coder encodeBool:self.verticalTrafficLightButtons forKey:[self _restorableKeyWithName:@"verticalTrafficLightButtons"]];
+    [coder encodeBool:self.hideTitleBarInFullScreen forKey:[self _restorableKeyWithName:@"hideTitleBarInFullScreen"]];
+    [coder encodeBool:self.showsBaselineSeparator forKey:[self _restorableKeyWithName:@"showsBaselineSeparator"]];
+    [coder encodeFloat:self.trafficLightButtonsLeftMargin forKey:[self _restorableKeyWithName:@"trafficLightButtonsLeftMargin"]];
+    [coder encodeFloat:self.fullScreenButtonRightMargin forKey:[self _restorableKeyWithName:@"fullScreenButtonRightMargin"]];
+
+
 }
 
 #pragma mark -
@@ -757,6 +778,13 @@ static inline CGGradientRef createGradientWithColors(NSColor *startingColor, NSC
             [(NSControl *)childView setEnabled:isMainWindowAndActive];
         }
     }
+}
+
+-(NSString *) _restorableKeyWithName:(NSString *)name
+{
+    NSString* prefix = @"INAppStoreWindow";
+    NSString* identifier = self.identifier;
+    return [NSString stringWithFormat:@"%@/%@/%@",prefix,identifier,name];
 }
 
 @end
